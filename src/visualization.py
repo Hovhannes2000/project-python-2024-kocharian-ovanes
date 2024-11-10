@@ -248,11 +248,12 @@ class User_Interface:
         plt.savefig(self.nfa_path)
         plt.close()
     
-    def show_image(self):
+    def show_image(self, width=800, height=300):
         self.draw_automaton()
 
         image_path = self.nfa_path  # Укажите путь к изображению
         self.image_label.grid()
+        
         # Удаляем старое изображение, если оно есть
         if hasattr(self.image_label, 'image'):
             self.image_label.config(image=None)  # Убираем текущее изображение
@@ -261,12 +262,15 @@ class User_Interface:
         # Загружаем новое изображение
         image = Image.open(image_path)
 
+        # Изменяем размер изображения
+        resized_image = image.resize((width, height))
+
         # Конвертируем изображение в формат, который Tkinter может использовать
-        tk_image = ImageTk.PhotoImage(image)
+        tk_image = ImageTk.PhotoImage(resized_image)
 
         # Устанавливаем новое изображение на метку
         self.image_label.config(image=tk_image)
         self.image_label.image = tk_image  # Сохраняем ссылку на новое изображение
+
         if self.nfa.is_full_dka:
             self.button_draw.config(state="disabled")
-            return
