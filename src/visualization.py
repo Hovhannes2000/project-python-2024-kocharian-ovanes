@@ -5,6 +5,7 @@ import numpy as np
 import random
 from automaton import *
 import tkinter as tk
+from tkinter import ttk
 from PIL import Image, ImageTk
 
 def automaton_to_transition_matrix(fa):
@@ -30,7 +31,7 @@ def automaton_to_transition_matrix(fa):
 fields = [
     "Количество состояний:",
     "Алфавит:",
-    "Переходы:\n В таком формате\n{(state,symbol): {states},}",
+    "Переходы:",
     "Финальные состояния:"
 ]
 
@@ -38,11 +39,29 @@ class User_Interface:
     def __init__(self):
         self.nfa = NFA()
         self.elements = []
-        self.master = tk.Tk()
-        self.master.title("Ввод данных для автомата")
 
-        # Устанавливаем размер окна
-        self.master.geometry("2900x1500")
+        self.width=3000
+        self.height=1500
+        self.master = tk.Tk()
+        self.master.title("Конечный Автомат")
+        self.master.geometry(f"{self.width}x{self.height}")
+        style = ttk.Style()
+        # Создаем фреймы
+        self.top_frame = ttk.Frame(self.master)
+        self.bottom_frame = ttk.Frame(self.master, style="input.TFrame")
+        style.configure("input.TFrame",background="lightblue")
+        # Размещаем фреймы
+        self.top_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, pady=(5, 0))
+        self.bottom_frame.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+
+        # Создаем левую и правую части верхнего фрейма
+        self.left_frame = ttk.Frame(self.top_frame, style="graph.TFrame")
+        style.configure("graph.TFrame", background="orange")
+        self.right_frame = ttk.Frame(self.top_frame, style="Control_panel.TFrame")
+        style.configure("Control_panel.TFrame", background="green")
+
+        self.left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.right_frame.pack(side=tk.RIGHT, fill=tk.Y)
 
         # Инициализируем строку, в которой мы находимся
         self.row = 0
@@ -52,13 +71,23 @@ class User_Interface:
         self.labels = []  # Список для хранения меток с данными
 
         # Создаем кнопку для подтверждения ввода
-        self.submit_button = tk.Button(self.master, text="Подтвердить", command=self.submit_data)
-        self.submit_button.grid(row=self.row + 1, column=2, padx=10, pady=10)
+        self.submit_button = tk.Button(self.bottom_frame, text="Подтвердить", command=self.submit_data)
+        self.submit_button.grid(row=0, column=1, padx=10, pady=10)
+
+        self.image_label = tk.Label(self.left_frame)
+        self.image_label.grid()
+
+        image = Image.open("white.png")
+        width=int(self.width * 0.83)
+        height=int(self.height * 0.83)
+        resized_image = image.resize((width, height))
+        tk_image = ImageTk.PhotoImage(resized_image)
+        self.image_label.config(image=tk_image)
+        self.image_label.image = tk_image
 
         # Добавляем первое поле ввода
         self.add_input_row()
 
-        self.image_label = tk.Label(self.master)
 
     def submit_data(self):
         # Получаем введенные данные
@@ -71,15 +100,17 @@ class User_Interface:
             self.elements.append(value)
             
             # Создаем метку для отображения введенных значений
-            label = tk.Label(self.master, text=f"{fields[self.row]} {value}")
-            label.grid(row=self.row, column=3, padx=10, pady=10)
-            self.labels.append(label)
+            # label = tk.Label(self.master, text=f"{fields[self.row]} {value}")
+            # label.grid(row=self.row, column=3, padx=10, pady=10)
+            # self.labels.append(label)
 
             self.entries[self.row].config(state="disabled")
+            self.submit_button.grid_remove()
 
             # Переходим к следующему полю ввода
             if self.row + 1 < len(fields):
                 self.row += 1
+                self.submit_button.grid(row=0, column=self.row + 1, padx=10, pady=10)
                 self.add_input_row()
             else:
                 self.submit_button.config(state="disabled")
@@ -87,17 +118,20 @@ class User_Interface:
 
     def add_input_row(self):
         # Добавляем метку и поле ввода для текущего поля
-        tk.Label(self.master, text=fields[self.row]).grid(row=self.row, column=0, padx=10, pady=10)
+        tk.Label(self.bottom_frame, text=fields[self.row]).grid(row=0, column=self.row, padx=10, pady=10)
 
-        if fields[self.row] == "Переходы:\n В таком формате\n{(state,symbol): {states},}":  
+        if fields[self.row] == "Переходы:":
             # Если это поле "Переходы", используем виджет Text
-            entry = tk.Text(self.master, height=5, width=20)
+            entry = tk.Text(self.bottom_frame, height=5, width=20)
 
             entry.bind("<Return>", self.add_new_line)  # Привязываем событие нажатия Enter
+            entry.grid(row=1, column=self.row, rowspan=3, padx=10, pady=10)
+            self.entries.append(entry)  # Сохраняем ссылку на новое поле ввода
+            return
         else:
-            entry = tk.Entry(self.master)
+            entry = tk.Entry(self.bottom_frame)
 
-        entry.grid(row=self.row, column=1, padx=10, pady=10)
+        entry.grid(row=1, column=self.row, padx=10, pady=10)
         self.entries.append(entry)  # Сохраняем ссылку на новое поле ввода
 
     def add_new_line(self, event):
@@ -105,6 +139,7 @@ class User_Interface:
         text_widget = event.widget
         text_widget.insert(tk.END, "\n")  # Вставляем перенос строки
         return "break"  # Прекращаем обработку события
+
     def build_nfa(self):
         self.nfa.initial_state = 'q0'
         for index in range(int(self.elements[0])):
@@ -117,33 +152,52 @@ class User_Interface:
 
     def nfa_buttons(self):
         # Заголовок для столбика кнопок
-        tk.Label(self.master, text="Visualising", font=("Arial", 16)).grid(row=0, column=4, padx=10, pady=10)
-
-        # Отступ (пустая строка) для отделения других элементов интерфейса
-        tk.Label(self.master, text="").grid(row=1, column=4, padx=10, pady=10)
+        tk.Label(self.right_frame, text="Visualising", font=("Arial", 38)).grid(row=0, column=0, padx=10, pady=10)
 
         # Создаем несколько кнопок и размещаем их в правом столбце
-        button_one_letter = tk.Button(self.master, text="Однобуквенные", 
-                                    command=lambda: self.nfa.make_transitions_single_letter() 
-                                    if not self.nfa.is_single_letters else None)
-        button_eps_transition = tk.Button(self.master, text="Без пустых переходов", 
-                                        command=lambda: self.nfa.remove_epsilon_transitions() 
-                                        if not self.nfa.is_without_epsilon else None)
-        button_determinism = tk.Button(self.master, text="Детерминированный", 
-                                        command=lambda: self.nfa.nfa_to_dfa() 
-                                        if not self.nfa.is_dfa else None)
-        button_full_dfa = tk.Button(self.master, text="Полный Детерминированный", 
-                                    command=lambda: self.nfa.fulling_dfa() 
-                                    if not self.nfa.is_full_dka else None)
-        self.button_draw = tk.Button(self.master, text="Нарисовать", command=self.show_image)
+        self.button_one_letter = tk.Button(self.right_frame, width=20, height=3, text="Однобуквенные", 
+                                    command=self.ButtonOneLetter)
+        self.button_eps_transition = tk.Button(self.right_frame, width=20, height=3, text="Без пустых переходов", 
+                                        command=self.ButtonEpsTransition)
+        self.button_determinism = tk.Button(self.right_frame, width=20, height=3, text="Детерминированный", 
+                                        command=self.ButtonToDfa)
+        self.button_full_dfa = tk.Button(self.right_frame, width=20, height=3, text="Полный\nДетерминированный", 
+                                    command=self.ButtonFullDfa)
+        self.button_draw = tk.Button(self.right_frame, width=20, height=3, text="Нарисовать", command=self.show_image)
+        
+        self.buttons_nfa=[self.button_one_letter, self.button_eps_transition, self.button_determinism, self.button_full_dfa]
 
         # Располагаем кнопки в вертикальном столбце
-        column_number = 4  # Позиция колонны (изменен на 4, чтобы кнопки находились под заголовком)
-        button_one_letter.grid(row=3, column=column_number, padx=10, pady=5)
-        button_eps_transition.grid(row=4, column=column_number, padx=10, pady=5)
-        button_determinism.grid(row=5, column=column_number, padx=10, pady=5)
-        button_full_dfa.grid(row=6, column=column_number, padx=10, pady=5)
-        self.button_draw.grid(row=7, column=column_number, padx=10, pady=5)
+        column_number = 0  # Позиция колонны
+        self.button_one_letter.grid(row=3, column=column_number, padx=5, pady=5)
+        self.button_eps_transition.grid(row=4, column=column_number, padx=5, pady=5)
+        self.button_determinism.grid(row=5, column=column_number, padx=5, pady=5)
+        self.button_full_dfa.grid(row=6, column=column_number, padx=5, pady=5)
+        self.button_draw.grid(row=7, column=column_number, padx=5, pady=5)
+
+    def ButtonOneLetter(self):
+        if not self.nfa.is_single_letters:
+            self.nfa.make_transitions_single_letter()
+        self.button_one_letter.config(state="disabled")
+    
+    def ButtonEpsTransition(self):
+        if not self.nfa.is_without_epsilon:
+            self.nfa.remove_epsilon_transitions()
+        for i in range(2):
+            self.buttons_nfa[i].config(state="disabled")
+
+    def ButtonToDfa(self):
+        if not self.nfa.is_dfa:
+            self.nfa.nfa_to_dfa()
+        for i in range(3):
+            self.buttons_nfa[i].config(state="disabled")
+
+    def ButtonFullDfa(self):
+        if not self.nfa.is_full_dka:
+            self.nfa.fulling_dfa()
+        for i in range(4):
+            self.buttons_nfa[i].config(state="disabled")
+        
 
     def draw_automaton(self):
         seed = 0
@@ -173,10 +227,7 @@ class User_Interface:
             if state in self.nfa.final_states:
                 # Финальное состояние - двойной круг
                 nx.draw_networkx_nodes(G, pos, nodelist=[state], node_size=3000,
-                                    node_color='lightblue', edgecolors='black', linewidths=2)
-                nx.draw_networkx_nodes(G, pos, nodelist=[state], node_size=3300,
-
-                                    node_color='none', edgecolors='black', linewidths=4)
+                                    node_color='red', edgecolors='black', linewidths=2)
             else:
                 # Обычное состояние - один круг
                 nx.draw_networkx_nodes(G, pos, nodelist=[state], node_size=3000,
@@ -248,9 +299,10 @@ class User_Interface:
         plt.savefig(self.nfa_path)
         plt.close()
     
-    def show_image(self, width=800, height=300):
+    def show_image(self):
         self.draw_automaton()
-
+        width=int(self.width * 0.83)
+        height=int(self.height * 0.83)
         image_path = self.nfa_path  # Укажите путь к изображению
         self.image_label.grid()
         
